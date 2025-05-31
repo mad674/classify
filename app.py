@@ -66,28 +66,28 @@ SELECTED_CLASSES = ["budget", "form", "invoice"]
 # except Exception as e:
 #     print(f"Error loading DETR model: {str(e)}")
 #     raise RuntimeError("Failed to load DETR model. Please ensure all dependencies are installed.")
-import onnxruntime as ort
-def download_model(file_id, output_path):
-    """
-    Downloads a file from Google Drive using gdown.
-    :param file_id: The Google Drive file ID.
-    :param output_path: The local path to save the file.
-    """
-    output_dir = os.path.dirname(output_path) or "."  # Use current directory if no directory is specified
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+# import onnxruntime as ort
+# def download_model(file_id, output_path):
+#     """
+#     Downloads a file from Google Drive using gdown.
+#     :param file_id: The Google Drive file ID.
+#     :param output_path: The local path to save the file.
+#     """
+#     output_dir = os.path.dirname(output_path) or "."  # Use current directory if no directory is specified
+#     if not os.path.exists(output_dir):
+#         os.makedirs(output_dir)
     
-    if not os.path.exists(output_path):
-        print(f"Downloading {output_path}...")
-        if file_id == "none":
-            return
-        url = f"https://drive.google.com/uc?id={file_id}"
-        gdown.download(url, output_path, quiet=False)
-    else:
-        print(f"{output_path} already exists.")
-MODEL_PATH ="vit_model_quant.onnx"
-download_model("1HzxgU5-78hyhrfwEvrPiGlDylvYbhdMP", MODEL_PATH)
-ort_session = ort.InferenceSession(MODEL_PATH)
+#     if not os.path.exists(output_path):
+#         print(f"Downloading {output_path}...")
+#         if file_id == "none":
+#             return
+#         url = f"https://drive.google.com/uc?id={file_id}"
+#         gdown.download(url, output_path, quiet=False)
+#     else:
+#         print(f"{output_path} already exists.")
+# MODEL_PATH ="vit_model_quant.onnx"
+# download_model("1HzxgU5-78hyhrfwEvrPiGlDylvYbhdMP", MODEL_PATH)
+# ort_session = ort.InferenceSession(MODEL_PATH)
 # pegasus_tokenizer = PegasusTokenizer.from_pretrained("doc_summary_tok")
 # pegasus_model = torch.load("pegasus_quantized.pt", map_location=device, weights_only=False)
 # MODEL_NAME = "bert-base-uncased"
@@ -117,50 +117,50 @@ async def health_check():
 
 
 
-@app.post("/predict")
-async def predict(file: UploadFile = File(...)):
-    extension = file.filename.split(".")[-1].lower()
+# @app.post("/predict")
+# async def predict(file: UploadFile = File(...)):
+#     extension = file.filename.split(".")[-1].lower()
 
-    if extension not in ["jpg", "jpeg", "png", "bmp", "txt", "docx", "pdf"]:
-        raise HTTPException(status_code=400, detail="Unsupported file type")
+#     if extension not in ["jpg", "jpeg", "png", "bmp", "txt", "docx", "pdf"]:
+#         raise HTTPException(status_code=400, detail="Unsupported file type")
 
-    try:
-        contents = await file.read()
+#     try:
+#         contents = await file.read()
 
-        # Convert to image depending on file type
-        if extension in ["jpg", "jpeg", "png", "bmp"]:
-            image = Image.open(io.BytesIO(contents)).convert("RGB")
+#         # Convert to image depending on file type
+#         if extension in ["jpg", "jpeg", "png", "bmp"]:
+#             image = Image.open(io.BytesIO(contents)).convert("RGB")
 
-        elif extension == "txt":
-            text = contents.decode("utf-8")
-            image = render_text_to_image(text)
+        # elif extension == "txt":
+        #     text = contents.decode("utf-8")
+        #     image = render_text_to_image(text)
 
-        elif extension == "docx":
-            text = extract_text_from_file(file,contents)
-            image = render_text_to_image(text)
+        # elif extension == "docx":
+        #     text = extract_text_from_file(file,contents)
+        #     image = render_text_to_image(text)
 
-        elif extension == "pdf":
-            text = extract_text_from_file(file,contents)
-            image = render_text_to_image(text)
+        # elif extension == "pdf":
+        #     text = extract_text_from_file(file,contents)
+        #     image = render_text_to_image(text)
 
-        # Predict
-        image_tensor = transform(image).unsqueeze(0).numpy()
-        input_name = ort_session.get_inputs()[0].name
-        ort_inputs = {input_name: image_tensor}
-        ort_outs = ort_session.run(None, ort_inputs)
-        logits = ort_outs[0]
-        probabilities = torch.nn.functional.softmax(torch.from_numpy(logits), dim=1).numpy().flatten()
+        # # Predict
+        # image_tensor = transform(image).unsqueeze(0).numpy()
+        # input_name = ort_session.get_inputs()[0].name
+        # ort_inputs = {input_name: image_tensor}
+        # ort_outs = ort_session.run(None, ort_inputs)
+        # logits = ort_outs[0]
+        # probabilities = torch.nn.functional.softmax(torch.from_numpy(logits), dim=1).numpy().flatten()
 
-        predicted_class = int(np.argmax(probabilities))
-        confidence = float(probabilities[predicted_class])
+        # predicted_class = int(np.argmax(probabilities))
+        # confidence = float(probabilities[predicted_class])
 
-        return JSONResponse(content={
-            "prediction": SELECTED_CLASSES[predicted_class],
-            "confidence": round(confidence, 2)
-        })
+    #     return JSONResponse(content={
+    #         "prediction": SELECTED_CLASSES[predicted_class],
+    #         "confidence": round(confidence, 2)
+    #     })
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail=str(e))
 
 # # File upload and masking endpoint
 # @app.post("/mask-file", response_model=MaskingResponse)
