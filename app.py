@@ -1,21 +1,21 @@
 from fastapi import FastAPI,Request, Response,APIRouter,UploadFile, Depends, HTTPException, status, File, Form
 from fastapi.responses import JSONResponse#, FileResponse
-# from schemas import MaskingResponse#,QueryIn, GenerateOut, PDFQuestionResponse , ImageMaskingResponse, ErrorResponse
+from schemas import MaskingResponse#,QueryIn, GenerateOut, PDFQuestionResponse , ImageMaskingResponse, ErrorResponse
 # from retriever import generate_predicted_gold_inds
 # from evaluator import evaluate_program
 # from generator import infer, build_vocab, PointerProgramGenerator
-# from masking import predict_and_mask, run_final_pattern_check#, BERTForNER, entity_mapping,mask_predictions
+from masking import predict_and_mask, run_final_pattern_check#, BERTForNER, entity_mapping,mask_predictions
 # from model_retriever import BertRetriever
 # from qa_pipeline.main import convert_pdf_to_json
 # from sklearn.feature_extraction.text import TfidfVectorizer
 # from sklearn.metrics.pairwise import cosine_similarity
-# from typing import Dict, List, Any, Union, Optional
+from typing import Dict#, List, Any, Union, Optional
 # import tempfile
-from utils import extract_text_from_file, render_text_to_image, transform#, mask_predictions
+# from utils import extract_text_from_file
 # import pdfplumber
 import gdown
 import torch
-# from transformers import AutoTokenizer#,BertModel,BertTokenizerFast , PegasusForConditionalGeneration, DetrForObjectDetection, DetrImageProcessor, DetrConfig
+from transformers import AutoTokenizer#,BertModel,BertTokenizerFast , PegasusForConditionalGeneration, DetrForObjectDetection, DetrImageProcessor, DetrConfig
 import numpy as np
 import json
 import os
@@ -26,14 +26,14 @@ import io
 # from safetensors.torch import safe_open
 # import pytesseract
 # import zipfile
-# from contextlib import asynccontextmanager
-from PIL import Image#, ImageDraw, ImageFont
+from contextlib import asynccontextmanager
+# from PIL import Image, ImageDraw, ImageFont
 # from docx import Document
 from fastapi.middleware.cors import CORSMiddleware
 os.environ["WANDB_DISABLED"] = "true"
 
-device = torch.device("cpu")#torch.device("cuda" if torch.cuda.is_available() else "cpu")
-SELECTED_CLASSES = ["budget", "form", "invoice"]
+device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # if not os.path.exists("pegasus/pegasus_quantized.pt"):
 #     with zipfile.ZipFile("pegasus/pegasus_model.zip", 'r') as zip_ref:
 #         zip_ref.extractall("pegasus")
@@ -66,33 +66,64 @@ SELECTED_CLASSES = ["budget", "form", "invoice"]
 # except Exception as e:
 #     print(f"Error loading DETR model: {str(e)}")
 #     raise RuntimeError("Failed to load DETR model. Please ensure all dependencies are installed.")
-# import onnxruntime as ort
-# def download_model(file_id, output_path):
-#     """
-#     Downloads a file from Google Drive using gdown.
-#     :param file_id: The Google Drive file ID.
-#     :param output_path: The local path to save the file.
-#     """
-#     output_dir = os.path.dirname(output_path) or "."  # Use current directory if no directory is specified
-#     if not os.path.exists(output_dir):
-#         os.makedirs(output_dir)
+
+def download_model(file_id, output_path):
+    """
+    Downloads a file from Google Drive using gdown.
+    :param file_id: The Google Drive file ID.
+    :param output_path: The local path to save the file.
+    """
+    output_dir = os.path.dirname(output_path) or "."  # Use current directory if no directory is specified
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     
-#     if not os.path.exists(output_path):
-#         print(f"Downloading {output_path}...")
-#         if file_id == "none":
-#             return
-#         url = f"https://drive.google.com/uc?id={file_id}"
-#         gdown.download(url, output_path, quiet=False)
-#     else:
-#         print(f"{output_path} already exists.")
-# MODEL_PATH ="vit_model_quant.onnx"
-# download_model("1HzxgU5-78hyhrfwEvrPiGlDylvYbhdMP", MODEL_PATH)
-# ort_session = ort.InferenceSession(MODEL_PATH)
+    if not os.path.exists(output_path):
+        print(f"Downloading {output_path}...")
+        if file_id == "none":
+            return
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, output_path, quiet=False)
+    else:
+        print(f"{output_path} already exists.")
+        
+MODEL_PATH ="quantized_ner_model.pt"
+download_model("1_bupFomoYtMq3WrexSsAv9DW7er-VdWD", MODEL_PATH)
+
 # pegasus_tokenizer = PegasusTokenizer.from_pretrained("doc_summary_tok")
 # pegasus_model = torch.load("pegasus_quantized.pt", map_location=device, weights_only=False)
-# MODEL_NAME = "bert-base-uncased"
+MODEL_NAME = "bert-base-uncased"
+
 # # Load model and tokenizer
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global ner_model, ner_tokenizer
+    # logger.info("Initializing model and tokenizer...")
+    try:
+        # Set device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # logger.info(f"Using device: {device}")
+        
+        # Load tokenizer
+        ner_tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        
+        # Initialize mode
+        # Check if model file exists
+        if os.path.exists(MODEL_PATH):
+            # Load model weights
+            ner_model=torch.load(MODEL_PATH, map_location=device,weights_only=False)
+            # logger.info(f"Model loaded from {MODEL_PATH}")
+        else:
+            print(f"Model file not found at {MODEL_PATH}, initializing with default weights")
+        
+        ner_model.to(device)
+        ner_model.eval()
+        yield
+        # logger.info("Model and tokenizer initialized successfully")
+    except Exception as e:
+        # logger.error(f"Error initializing model: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to initialize model: {str(e)}")
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows your client app to make requests
@@ -114,53 +145,6 @@ async def root():
 @app.head("/")
 async def health_check():
     return JSONResponse(content=None, status_code=200)
-
-
-
-# @app.post("/predict")
-# async def predict(file: UploadFile = File(...)):
-#     extension = file.filename.split(".")[-1].lower()
-
-#     if extension not in ["jpg", "jpeg", "png", "bmp", "txt", "docx", "pdf"]:
-#         raise HTTPException(status_code=400, detail="Unsupported file type")
-
-#     try:
-#         contents = await file.read()
-
-#         # Convert to image depending on file type
-#         if extension in ["jpg", "jpeg", "png", "bmp"]:
-#             image = Image.open(io.BytesIO(contents)).convert("RGB")
-
-        # elif extension == "txt":
-        #     text = contents.decode("utf-8")
-        #     image = render_text_to_image(text)
-
-        # elif extension == "docx":
-        #     text = extract_text_from_file(file,contents)
-        #     image = render_text_to_image(text)
-
-        # elif extension == "pdf":
-        #     text = extract_text_from_file(file,contents)
-        #     image = render_text_to_image(text)
-
-        # # Predict
-        # image_tensor = transform(image).unsqueeze(0).numpy()
-        # input_name = ort_session.get_inputs()[0].name
-        # ort_inputs = {input_name: image_tensor}
-        # ort_outs = ort_session.run(None, ort_inputs)
-        # logits = ort_outs[0]
-        # probabilities = torch.nn.functional.softmax(torch.from_numpy(logits), dim=1).numpy().flatten()
-
-        # predicted_class = int(np.argmax(probabilities))
-        # confidence = float(probabilities[predicted_class])
-
-    #     return JSONResponse(content={
-    #         "prediction": SELECTED_CLASSES[predicted_class],
-    #         "confidence": round(confidence, 2)
-    #     })
-
-    # except Exception as e:
-    #     raise HTTPException(status_code=500, detail=str(e))
 
 # # File upload and masking endpoint
 # @app.post("/mask-file", response_model=MaskingResponse)
@@ -195,28 +179,28 @@ async def health_check():
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
-# # Text masking endpoint
-# @app.post("/mask-text", response_model=MaskingResponse)
-# async def mask_text(request: Dict[str, str]):
-#     """
-#     Mask sensitive information in provided text.
-#     """
-#     text = request.get("text", "")
+# Text masking endpoint
+@app.post("/mask-text", response_model=MaskingResponse)
+async def mask_text(request: Dict[str, str]):
+    """
+    Mask sensitive information in provided text.
+    """
+    text = request.get("text", "")
     
-#     if not text:
-#         raise HTTPException(status_code=400, detail="No text provided")
+    if not text:
+        raise HTTPException(status_code=400, detail="No text provided")
     
-#     try:
-#         original_text = text
-#         masked_text = predict_and_mask(ner_tokenizer,ner_model,text,device)
+    try:
+        original_text = text
+        masked_text = predict_and_mask(ner_tokenizer,ner_model,text,device)
         
-#         # Run a final check to ensure correct masking
-#         masked_text = run_final_pattern_check(masked_text, original_text)
+        # Run a final check to ensure correct masking
+        masked_text = run_final_pattern_check(masked_text, original_text)
         
-#         return MaskingResponse(masked_text=masked_text)
+        return MaskingResponse(masked_text=masked_text)
     
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error processing text: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing text: {str(e)}")
 
 
 # @app.post("/mask-image", response_model=ImageMaskingResponse)
@@ -280,6 +264,7 @@ async def health_check():
 #                 target_sizes=target_sizes, 
 #                 threshold=0.9
 #             )[0]
+
 #             # Check if any objects were detected
 #             if len(results["boxes"]) == 0:
 #                 print("No objects detected in the image")
