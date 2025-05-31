@@ -1,0 +1,25 @@
+fastapi
+uvicorn
+pydantic
+typing
+torch
+# transformers
+# sentence-transformers
+# sympy
+numpy
+gdown
+requests
+# sentencepiece
+# scikit-learn
+torchvision
+# timm
+# safetensors
+python-multipart
+pillow
+python-docx
+pdfplumber
+onnxruntime
+# huggingface-hub
+easyocr
+# pathlib
+# pytesseract
