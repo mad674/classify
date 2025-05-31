@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 pydantic
-typing
+# typing
 torch
 # transformers
 # sentence-transformers
