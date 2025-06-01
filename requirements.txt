@@ -7,7 +7,7 @@ transformers
 # sentence-transformers
 # sympy
 numpy
-gdown
+# gdown
 requests
 # sentencepiece
 # scikit-learn
