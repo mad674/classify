@@ -33,10 +33,12 @@ from fastapi.middleware.cors import CORSMiddleware
 os.environ["WANDB_DISABLED"] = "true"
 from huggingface_hub import hf_hub_download
 
+MODEL_PATH = "quantized_ner_model.pt"
+
 try:
     # Check if the model file exists locally
-    if not os.path.exists("quantized_ner_model.pt"):
-        print(f"Downloading model from Hugging Face: quantized_ner_model.pt")
+    if not os.path.exists(MODEL_PATH):
+        print(f"Downloading model from Hugging Face: {MODEL_PATH}")
         MODEL_PATH = hf_hub_download(
             repo_id="madhi9/ner_model",
             filename="quantized_ner_model.pt",
@@ -44,7 +46,7 @@ try:
         )
         print(f"Model downloaded successfully to: {MODEL_PATH}")
     else:
-        print(f"Model file found locally at: quantized_ner_model.pt")
+        print(f"Model file found locally at: {MODEL_PATH}")
 except Exception as e:
     print(f"Failed to download model: {str(e)}")
     exit(1)  # Exit the program if the download fails
@@ -59,13 +61,6 @@ async def lifespan(app: FastAPI):
         ner_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         
         # Initialize model
-        if os.path.exists("quantized_ner_model.pt"):
-            ner_model = torch.load("quantized_ner_model.pt", map_location="cpu",weights_only=False)
-        else:
-            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
-        
-        ner_model.to(device)
-        ner_model.eval()
         yield
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initialize model: {str(e)}")
@@ -138,6 +133,13 @@ async def mask_text(request: Dict[str, str]):
         raise HTTPException(status_code=400, detail="No text provided")
     
     try:
+        if os.path.exists(MODEL_PATH):
+            ner_model = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+        else:
+            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+        
+        ner_model.to(device)
+        ner_model.eval()
         original_text = text
         masked_text = predict_and_mask(ner_tokenizer,ner_model,text,device)
         
