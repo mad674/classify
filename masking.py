@@ -1,13 +1,13 @@
 import torch
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoModel
 import re
 import os
 # from pathlib import Path
-from typing import Dict, List, Any
-from pydantic import BaseModel
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-from fastapi import UploadFile, HTTPException
+# from typing import Dict, List, Any
+# from pydantic import BaseModel
+# import numpy as np
+# from PIL import ImageDraw#, ImageFont
+# from fastapi import UploadFile, HTTPException
 
 # Entity label mappings - with specific PII types
 entity_mapping = {
@@ -318,13 +318,13 @@ def predict_and_mask(tokenizer, model, text,device):
     return masked_text
 
 
-def mask_predictions(image, boxes, fill_color=(0, 0, 0)):
-    masked_image = image.copy()
-    draw = ImageDraw.Draw(masked_image)
-    for box in boxes:
-        xmin, ymin, xmax, ymax = box.tolist()
-        draw.rectangle([xmin, ymin, xmax, ymax], fill=fill_color)
-    return masked_image
+# def mask_predictions(image, boxes, fill_color=(0, 0, 0)):
+#     masked_image = image.copy()
+#     draw = ImageDraw.Draw(masked_image)
+#     for box in boxes:
+#         xmin, ymin, xmax, ymax = box.tolist()
+#         draw.rectangle([xmin, ymin, xmax, ymax], fill=fill_color)
+#     return masked_image
 
 def run_final_pattern_check(text, original_text):
     """

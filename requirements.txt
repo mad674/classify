@@ -11,15 +11,15 @@ numpy
 requests
 # sentencepiece
 # scikit-learn
-#torchvision
+# torchvision
 # timm
 # safetensors
-#python-multipart
-pillow
-#python-docx
-#pdfplumber
-#onnxruntime
+# python-multipart
+# pillow
+# python-docx
+# pdfplumber
+# onnxruntime
 # huggingface-hub
-#easyocr
+# easyocr
 # pathlib
 # pytesseract
