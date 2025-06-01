@@ -117,7 +117,7 @@ async def lifespan(app: FastAPI):
         
         # ner_model.to(device)
         # ner_model.eval()
-        # yield
+        yield
         # logger.info("Model and tokenizer initialized successfully")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initialize model: {str(e)}")
