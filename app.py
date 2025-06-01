@@ -13,7 +13,7 @@ from typing import Dict#, List, Any, Union, Optional
 # import tempfile
 # from utils import extract_text_from_file
 # import pdfplumber
-import gdown
+# import gdown
 import torch
 from transformers import AutoTokenizer#,BertModel,BertTokenizerFast , PegasusForConditionalGeneration, DetrForObjectDetection, DetrImageProcessor, DetrConfig
 import numpy as np
