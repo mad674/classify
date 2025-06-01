@@ -13,7 +13,7 @@ from typing import Dict#, List, Any, Union, Optional
 # import tempfile
 # from utils import extract_text_from_file
 # import pdfplumber
-import gdown
+# import gdown
 import torch
 from transformers import AutoTokenizer#,BertModel,BertTokenizerFast , PegasusForConditionalGeneration, DetrForObjectDetection, DetrImageProcessor, DetrConfig
 import numpy as np
@@ -31,40 +31,40 @@ import io
 # from docx import Document
 from fastapi.middleware.cors import CORSMiddleware
 os.environ["WANDB_DISABLED"] = "true"
-# from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download
 
 MODEL_PATH = "quantized_ner_model.pt"
 
-# try:
-#     # Check if the model file exists locally
-#     if not os.path.exists(MODEL_PATH):
-#         print(f"Downloading model from Hugging Face: {MODEL_PATH}")
-#         MODEL_PATH = hf_hub_download(
-#             repo_id="madhi9/ner_model",
-#             filename="quantized_ner_model.pt",
-#             local_dir="./"  # Download to the current directory
-#         )
-#         print(f"Model downloaded successfully to: {MODEL_PATH}")
-#     else:
-#         print(f"Model file found locally at: {MODEL_PATH}")
-# except Exception as e:
-#     print(f"Failed to download model: {str(e)}")
-#     exit(1)  # Exit the program if the download fails
-
-def download_model(file_id, output_path):
-    output_dir = os.path.dirname(output_path) or "."  # Use current directory if no directory is specified
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    
-    if not os.path.exists(output_path):
-        print(f"Downloading {output_path}...")
-        if file_id != "none":
-            url = f"https://drive.google.com/uc?id={file_id}"
-            gdown.download(url, output_path, quiet=False)
+try:
+    # Check if the model file exists locally
+    if not os.path.exists(MODEL_PATH):
+        print(f"Downloading model from Hugging Face: {MODEL_PATH}")
+        MODEL_PATH = hf_hub_download(
+            repo_id="madhi9/ner_model",
+            filename="quantized_ner_model.pt",
+            local_dir="./"  # Download to the current directory
+        )
+        print(f"Model downloaded successfully to: {MODEL_PATH}")
     else:
-        print(f"{output_path} already exists.") 
+        print(f"Model file found locally at: {MODEL_PATH}")
+except Exception as e:
+    print(f"Failed to download model: {str(e)}")
+    exit(1)  # Exit the program if the download fails
 
-download_model("1_bupFomoYtMq3WrexSsAv9DW7er-VdWD", MODEL_PATH)
+# def download_model(file_id, output_path):
+#     output_dir = os.path.dirname(output_path) or "."  # Use current directory if no directory is specified
+#     if not os.path.exists(output_dir):
+#         os.makedirs(output_dir)
+    
+#     if not os.path.exists(output_path):
+#         print(f"Downloading {output_path}...")
+#         if file_id != "none":
+#             url = f"https://drive.google.com/uc?id={file_id}"
+#             gdown.download(url, output_path, quiet=False)
+#     else:
+#         print(f"{output_path} already exists.") 
+
+# download_model("1_bupFomoYtMq3WrexSsAv9DW7er-VdWD", MODEL_PATH)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ner_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 # Initialize model
@@ -133,12 +133,12 @@ async def mask_text(request: Dict[str, str]):
     if not text:
         raise HTTPException(status_code=400, detail="No text provided")
     try:
-        # if os.path.exists(MODEL_PATH):
-        #     ner_model = torch.load(MODEL_PATH, map_location=device, weights_only=False)
-        # else:
-        #     raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
-        # ner_model.to(device)
-        # ner_model.eval()
+        if os.path.exists(MODEL_PATH):
+            ner_model = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+        else:
+            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+        ner_model.to(device)
+        ner_model.eval()
         original_text = text
         masked_text = predict_and_mask(ner_tokenizer,ner_model,text,device)
         # Run a final check to ensure correct masking
