@@ -86,12 +86,12 @@ def download_model(file_id, output_path):
     else:
         print(f"{output_path} already exists.")
         
-# MODEL_PATH ="quantized_ner_model.pt"
+MODEL_PATH ="quantized_ner_model.pt"
 # download_model("1_bupFomoYtMq3WrexSsAv9DW7er-VdWD", MODEL_PATH)
 
 # pegasus_tokenizer = PegasusTokenizer.from_pretrained("doc_summary_tok")
 # pegasus_model = torch.load("pegasus_quantized.pt", map_location=device, weights_only=False)
-# MODEL_NAME = "bert-base-uncased"
+MODEL_NAME = "bert-base-uncased"
 
 # # Load model and tokenizer
 @asynccontextmanager
