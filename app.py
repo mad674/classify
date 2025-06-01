@@ -94,35 +94,35 @@ def download_model(file_id, output_path):
 # MODEL_NAME = "bert-base-uncased"
 
 # # Load model and tokenizer
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     global ner_model, ner_tokenizer
-#     # logger.info("Initializing model and tokenizer...")
-#     try:
-#         # Set device
-#         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#         # logger.info(f"Using device: {device}")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global ner_model, ner_tokenizer
+    # logger.info("Initializing model and tokenizer...")
+    try:
+        # Set device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # logger.info(f"Using device: {device}")
         
-#         # Load tokenizer
-#         ner_tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        # Load tokenizer
+        ner_tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
         
-#         # Initialize mode
-#         # Check if model file exists
-#         if os.path.exists(MODEL_PATH):
-#             # Load model weights
-#             ner_model=torch.load(MODEL_PATH, map_location=device,weights_only=False)
-#             # logger.info(f"Model loaded from {MODEL_PATH}")
-#         else:
-#             print(f"Model file not found at {MODEL_PATH}, initializing with default weights")
+        # Initialize mode
+        # Check if model file exists
+        # if os.path.exists(MODEL_PATH):
+        #     # Load model weights
+        #     ner_model=torch.load(MODEL_PATH, map_location=device,weights_only=False)
+        #     # logger.info(f"Model loaded from {MODEL_PATH}")
+        # else:
+        #     print(f"Model file not found at {MODEL_PATH}, initializing with default weights")
         
-#         ner_model.to(device)
-#         ner_model.eval()
-#         yield
-#         # logger.info("Model and tokenizer initialized successfully")
-#     except Exception as e:
-        # raise HTTPException(status_code=500, detail=f"Failed to initialize model: {str(e)}")
+        # ner_model.to(device)
+        # ner_model.eval()
+        # yield
+        # logger.info("Model and tokenizer initialized successfully")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to initialize model: {str(e)}")
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows your client app to make requests
