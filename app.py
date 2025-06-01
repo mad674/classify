@@ -68,12 +68,12 @@ except Exception as e:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ner_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 # Initialize model
-if os.path.exists(MODEL_PATH):
-    ner_model = torch.load(MODEL_PATH, map_location=device, weights_only=False)
-else:
-    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
-ner_model.to(device)
-ner_model.eval()
+# if os.path.exists(MODEL_PATH):
+#     ner_model = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+# else:
+#     raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+# ner_model.to(device)
+# ner_model.eval()
 
 app = FastAPI()
 app.add_middleware(
@@ -124,6 +124,7 @@ async def health_check():
 #         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 # Text masking endpoint
+
 @app.post("/mask-text", response_model=MaskingResponse)
 async def mask_text(request: Dict[str, str]):
     """
@@ -143,7 +144,6 @@ async def mask_text(request: Dict[str, str]):
         masked_text = predict_and_mask(ner_tokenizer,ner_model,text,device)
         # Run a final check to ensure correct masking
         masked_text = run_final_pattern_check(masked_text, original_text)
-        
         return MaskingResponse(masked_text=masked_text)
     
     except Exception as e:
