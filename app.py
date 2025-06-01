@@ -70,24 +70,24 @@ device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #     print(f"Error loading DETR model: {str(e)}")
 #     raise RuntimeError("Failed to load DETR model. Please ensure all dependencies are installed.")
 
-def download_model(file_id, output_path):
-    """
-    Downloads a file from Google Drive using gdown.
-    :param file_id: The Google Drive file ID.
-    :param output_path: The local path to save the file.
-    """
-    output_dir = os.path.dirname(output_path) or "."  # Use current directory if no directory is specified
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+# def download_model(file_id, output_path):
+#     """
+#     Downloads a file from Google Drive using gdown.
+#     :param file_id: The Google Drive file ID.
+#     :param output_path: The local path to save the file.
+#     """
+#     output_dir = os.path.dirname(output_path) or "."  # Use current directory if no directory is specified
+#     if not os.path.exists(output_dir):
+#         os.makedirs(output_dir)
     
-    if not os.path.exists(output_path):
-        print(f"Downloading {output_path}...")
-        if file_id == "none":
-            return
-        url = f"https://drive.google.com/uc?id={file_id}"
-        gdown.download(url, output_path, quiet=False)
-    else:
-        print(f"{output_path} already exists.")
+#     if not os.path.exists(output_path):
+#         print(f"Downloading {output_path}...")
+#         if file_id == "none":
+#             return
+#         url = f"https://drive.google.com/uc?id={file_id}"
+#         gdown.download(url, output_path, quiet=False)
+#     else:
+#         print(f"{output_path} already exists.")
         
 MODEL_PATH ="quantized_ner_model.pt"
 # download_model("1_bupFomoYtMq3WrexSsAv9DW7er-VdWD", MODEL_PATH)
@@ -113,7 +113,7 @@ async def lifespan(app: FastAPI):
         # Check if model file exists
         if os.path.exists(MODEL_PATH):
             # Load model weights
-            ner_model=torch.load(model_path , map_location=device,weights_only=False)
+            ner_model=torch.load(MODEL_PATH, map_location=device,weights_only=False)
             # logger.info(f"Model loaded from {MODEL_PATH}")
         else:
             print(f"Model file not found at {MODEL_PATH}, initializing with default weights")
