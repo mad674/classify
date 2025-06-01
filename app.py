@@ -61,6 +61,13 @@ async def lifespan(app: FastAPI):
         ner_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         
         # Initialize model
+        if os.path.exists(MODEL_PATH):
+            ner_model = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+        else:
+            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+        ner_model.to(device)
+        ner_model.eval()
+        
         yield
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initialize model: {str(e)}")
@@ -133,13 +140,13 @@ async def mask_text(request: Dict[str, str]):
         raise HTTPException(status_code=400, detail="No text provided")
     
     try:
-        if os.path.exists(MODEL_PATH):
-            ner_model = torch.load(MODEL_PATH, map_location=device, weights_only=False)
-        else:
-            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+        # if os.path.exists(MODEL_PATH):
+        #     ner_model = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+        # else:
+        #     raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
         
-        ner_model.to(device)
-        ner_model.eval()
+        # ner_model.to(device)
+        # ner_model.eval()
         original_text = text
         masked_text = predict_and_mask(ner_tokenizer,ner_model,text,device)
         
