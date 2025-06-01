@@ -33,95 +33,40 @@ from fastapi.middleware.cors import CORSMiddleware
 os.environ["WANDB_DISABLED"] = "true"
 from huggingface_hub import hf_hub_download
 
-# Download file from Hugging Face
-model_path = hf_hub_download(repo_id="madhi9/ner_model", filename="quantized_ner_model.pt")
-device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
+try:
+    # Check if the model file exists locally
+    if not os.path.exists("quantized_ner_model.pt"):
+        print(f"Downloading model from Hugging Face: quantized_ner_model.pt")
+        MODEL_PATH = hf_hub_download(
+            repo_id="madhi9/ner_model",
+            filename="quantized_ner_model.pt",
+            local_dir="./"  # Download to the current directory
+        )
+        print(f"Model downloaded successfully to: {MODEL_PATH}")
+    else:
+        print(f"Model file found locally at: quantized_ner_model.pt")
+except Exception as e:
+    print(f"Failed to download model: {str(e)}")
+    exit(1)  # Exit the program if the download fails
 
-# if not os.path.exists("pegasus/pegasus_quantized.pt"):
-#     with zipfile.ZipFile("pegasus/pegasus_model.zip", 'r') as zip_ref:
-#         zip_ref.extractall("pegasus")
-#     os.remove("pegasus/pegasus_model.zip")
-# IMAGE_MODEL_DIR = "./detr_model"
-# PROCESSOR_DIR = "./detr_processor"
-# try:
-#     # Load model and processor
-#     img_config = DetrConfig.from_json_file(os.path.join(IMAGE_MODEL_DIR,"config.json"))
-#     img_model = DetrForObjectDetection(img_config)
-    
-#     # Fix the device parameter in safe_open
-#     with safe_open(os.path.join(IMAGE_MODEL_DIR, "model.safetensors"), framework="pt") as f:
-#         img_state_dict = {k: f.get_tensor(k) for k in f.keys()}
-#     # Move model to device after loading state dict
-#     img_model.load_state_dict(img_state_dict)
-#     img_model = img_model.to(device)
-#     img_model.eval()
-    
-#     if os.path.exists(os.path.join(PROCESSOR_DIR, "preprocessor_config.json")):
-#         img_processor = DetrImageProcessor.from_pretrained(
-#             PROCESSOR_DIR,
-#             local_files_only=True
-#         )
-#     else:
-#         raise FileNotFoundError(
-#             f"Processor files not found in {PROCESSOR_DIR}. "
-#             "Please run download_processor.py first."
-#         )
-# except Exception as e:
-#     print(f"Error loading DETR model: {str(e)}")
-#     raise RuntimeError("Failed to load DETR model. Please ensure all dependencies are installed.")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# def download_model(file_id, output_path):
-#     """
-#     Downloads a file from Google Drive using gdown.
-#     :param file_id: The Google Drive file ID.
-#     :param output_path: The local path to save the file.
-#     """
-#     output_dir = os.path.dirname(output_path) or "."  # Use current directory if no directory is specified
-#     if not os.path.exists(output_dir):
-#         os.makedirs(output_dir)
-    
-#     if not os.path.exists(output_path):
-#         print(f"Downloading {output_path}...")
-#         if file_id == "none":
-#             return
-#         url = f"https://drive.google.com/uc?id={file_id}"
-#         gdown.download(url, output_path, quiet=False)
-#     else:
-#         print(f"{output_path} already exists.")
-        
-MODEL_PATH ="quantized_ner_model.pt"
-# download_model("1_bupFomoYtMq3WrexSsAv9DW7er-VdWD", MODEL_PATH)
-
-# pegasus_tokenizer = PegasusTokenizer.from_pretrained("doc_summary_tok")
-# pegasus_model = torch.load("pegasus_quantized.pt", map_location=device, weights_only=False)
-MODEL_NAME = "bert-base-uncased"
-
-# # Load model and tokenizer
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global ner_model, ner_tokenizer
-    # logger.info("Initializing model and tokenizer...")
     try:
-        # Set device
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # logger.info(f"Using device: {device}")
-        
         # Load tokenizer
-        ner_tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        ner_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         
-        # Initialize mode
-        # Check if model file exists
-        if os.path.exists(MODEL_PATH):
-            # Load model weights
-            ner_model=torch.load(MODEL_PATH, map_location=device,weights_only=False)
-            # logger.info(f"Model loaded from {MODEL_PATH}")
+        # Initialize model
+        if os.path.exists("quantized_ner_model.pt"):
+            ner_model = torch.load("quantized_ner_model.pt", map_location="cpu",weights_only=False)
         else:
-            print(f"Model file not found at {MODEL_PATH}, initializing with default weights")
+            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
         
         ner_model.to(device)
         ner_model.eval()
         yield
-        # logger.info("Model and tokenizer initialized successfully")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initialize model: {str(e)}")
 
