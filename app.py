@@ -1,15 +1,15 @@
 from fastapi import FastAPI,Request, Response,APIRouter,UploadFile, Depends, HTTPException, status, File, Form
 from fastapi.responses import JSONResponse#, FileResponse
-# from schemas import MaskingResponse#,QueryIn, GenerateOut, PDFQuestionResponse , ImageMaskingResponse, ErrorResponse
+from schemas import MaskingResponse#,QueryIn, GenerateOut, PDFQuestionResponse , ImageMaskingResponse, ErrorResponse
 # from retriever import generate_predicted_gold_inds
 # from evaluator import evaluate_program
 # from generator import infer, build_vocab, PointerProgramGenerator
-# from masking import predict_and_mask, run_final_pattern_check#, BERTForNER, entity_mapping,mask_predictions
+from masking import predict_and_mask, run_final_pattern_check#, BERTForNER, entity_mapping,mask_predictions
 # from model_retriever import BertRetriever
 # from qa_pipeline.main import convert_pdf_to_json
 # from sklearn.feature_extraction.text import TfidfVectorizer
 # from sklearn.metrics.pairwise import cosine_similarity
-# from typing import Dict#, List, Any, Union, Optional
+from typing import Dict#, List, Any, Union, Optional
 # import tempfile
 # from utils import extract_text_from_file
 # import pdfplumber
@@ -31,7 +31,10 @@ from contextlib import asynccontextmanager
 # from docx import Document
 from fastapi.middleware.cors import CORSMiddleware
 os.environ["WANDB_DISABLED"] = "true"
+from huggingface_hub import hf_hub_download
 
+# Download file from Hugging Face
+model_path = hf_hub_download(repo_id="madhi9/ner_model", filename="quantized_ner_model.pt")
 device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # if not os.path.exists("pegasus/pegasus_quantized.pt"):
@@ -108,15 +111,15 @@ async def lifespan(app: FastAPI):
         
         # Initialize mode
         # Check if model file exists
-        # if os.path.exists(MODEL_PATH):
-        #     # Load model weights
-        #     ner_model=torch.load(MODEL_PATH, map_location=device,weights_only=False)
-        #     # logger.info(f"Model loaded from {MODEL_PATH}")
-        # else:
-        #     print(f"Model file not found at {MODEL_PATH}, initializing with default weights")
+        if os.path.exists(MODEL_PATH):
+            # Load model weights
+            ner_model=torch.load(model_path , map_location=device,weights_only=False)
+            # logger.info(f"Model loaded from {MODEL_PATH}")
+        else:
+            print(f"Model file not found at {MODEL_PATH}, initializing with default weights")
         
-        # ner_model.to(device)
-        # ner_model.eval()
+        ner_model.to(device)
+        ner_model.eval()
         yield
         # logger.info("Model and tokenizer initialized successfully")
     except Exception as e:
@@ -179,27 +182,27 @@ async def health_check():
 #         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 # Text masking endpoint
-# @app.post("/mask-text", response_model=MaskingResponse)
-# async def mask_text(request: Dict[str, str]):
-#     """
-#     Mask sensitive information in provided text.
-#     """
-#     text = request.get("text", "")
+@app.post("/mask-text", response_model=MaskingResponse)
+async def mask_text(request: Dict[str, str]):
+    """
+    Mask sensitive information in provided text.
+    """
+    text = request.get("text", "")
     
-#     if not text:
-#         raise HTTPException(status_code=400, detail="No text provided")
+    if not text:
+        raise HTTPException(status_code=400, detail="No text provided")
     
-#     try:
-#         original_text = text
-#         masked_text = predict_and_mask(ner_tokenizer,ner_model,text,device)
+    try:
+        original_text = text
+        masked_text = predict_and_mask(ner_tokenizer,ner_model,text,device)
         
-#         # Run a final check to ensure correct masking
-#         masked_text = run_final_pattern_check(masked_text, original_text)
+        # Run a final check to ensure correct masking
+        masked_text = run_final_pattern_check(masked_text, original_text)
         
-#         return MaskingResponse(masked_text=masked_text)
+        return MaskingResponse(masked_text=masked_text)
     
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error processing text: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing text: {str(e)}")
 
 
 # @app.post("/mask-image", response_model=ImageMaskingResponse)
